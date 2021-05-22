@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="img/favicon.png" type="image/x-icon">
+  <title>IRC</title>
+  <link href="plugins/emotki/stylesheets/jquery.cssemoticons.css" media="screen" rel="stylesheet" type="text/css" />
+  <script src="plugins/emotki/javascripts/jquery-1.4.2.min.js" type="text/javascript"></script>
+  <script src="plugins/emotki/javascripts/jquery.cssemoticons.js" type="text/javascript"></script>
+
+  <link rel="stylesheet" href="plugins/scrollbar/simplebar.css" />
+  <script src="plugins/scrollbar/simplebar.min.js"></script>
+
+  <style>
+    html {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #chat_wrapper {
+      width: calc(100% - 20px);
+      height: 100%;
+      overflow: auto;
+      border: 1px solid black;
+      margin: 10px 10px;
+      box-sizing: border-box;
+    }
+
+    #chat_wrapper p {
+      margin: 10px 10px;
+    }
+
+    .action_message {
+      text-align: center;
+      background: blanchedalmond;
+      padding: 10px;
+    }
+
+    .timestamp,
+    .username {
+      padding-right: 5px;
+    }
+
+    .message {
+      color: lightseagreen
+    }
+
+    #chat_input {
+      width: calc(100% - 20px);
+      margin: 10px 10px;
+      margin-top: 0px;
+      height: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="chat_wrapper" data-simplebar>
+    <div id="chat">
+      <!-- <p>
+        <span class="timestamp">[12:21]</span><span class="username">
+          <@Scalak>
+        </span>
+        <span class="message">asdasdasdsadassaldhas d hdsiughb edgf iuhgf w iuhewi uhbevriu hwer gfih uegw uhwef guho uhio;gefwr iuh ihouwerfg hiuoihgwrel hbvvrwbj uvdfb c he biul wefihouw d</span>
+      </p>
+      <p> -->
+    </div>
+  </div>
+  <input type="text" name="chat_input" id="chat_input" autofocus>
+  <script>
+
+    class Color {
+      static getRandom(type = 'hex') {
+        var random_color_rgb = [Math.floor(Math.random() * 256), Math.floor(Math.random() * 256), Math.floor(Math.random() * 256)]
+        // Math.floor(Math.random() * 256)  losuje liczbe z przedzialu <0, 1), pozniej mnozy przez 256, zeby dostac liczbe od 0 do mniejszej od 256, i pozniej zaokragla w dol, zeby dostac mxymalnie 255
+        var random_color_hex = []
+        for (let color of random_color_rgb) {
+          if (parseInt(color).toString(16).length == 1) {
+            random_color_hex.push('0' + parseInt(color).toString(16)) // upewniamy sie, ze gdy liczba jest jedno cyfrowa to zajmie ona conajmniej 2 miejsca, zeby po zamianie do hex, kazdy kolor mial po 2 cyfry na kolor (2x3)
+          } else {
+            random_color_hex.push(parseInt(color).toString(16)) // .toString(16) zamieniamy na system 16 (base16)
+          }
+        }
+        random_color_hex = '#' + random_color_hex.join('')
+        random_color_rgb = 'rgb(' + random_color_rgb.join(', ') + ')'
+
+        if (type == 'hex') {
+          return random_color_hex
+        } else if (type == 'rgb') {
+          return random_color_rgb
+        } else {
+          console.error('Bad parameter for function randomColor() - "' + type + '". Should be "rgb" "hex" or left undefined (defaults to hex)')
+        }
+
+      }
+    }
+
+    class Time {
+      static getText(ms) {
+        let date = new Date(ms)
+        //wyliczmy ile w ms jest
+        let h = date.getHours() //godzin
+        let m = date.getMinutes() //minut
+
+
+        //jeśli nasza liczba ma mniej cyfr niż 3 lub 2 to dopisujemy odpowiednio zera z przodu
+        h < 10 ? h = `0${h}` : h = `${h}`
+        m < 10 ? m = `0${m}` : m = `${m}`
+
+        return `[${h}:${m}]` // zwraca string z godzinami:minutami:sekundami.ms
+      }
+    }
+
+
+    let my_username = ''
+    while (my_username.trim() == '') {
+      my_username = prompt('Wpisz nick')
+    }
+
+    let chat_wrapper = document.getElementById('chat_wrapper')
+    let chat = document.getElementById('chat')
+    let input = document.getElementById('chat_input')
+
+    let my_color = Color.getRandom()
+
+    let input_history = []
+    let current_history_index = null
+
+
+    class Poll {
+      static async init() {
+        const response = await fetch('/poll', { method: 'GET' })
+        let response_decoded = await response.json()
+
+        console.log(response_decoded)
+
+        let p = document.createElement('p')
+        let span_timestamp = document.createElement('span')
+
+        span_timestamp.className = "timestamp"
+        span_timestamp.innerText = Time.getText(response_decoded.time)
+        p.append(span_timestamp)
+
+        let span_message = document.createElement('span')
+        span_message.innerText = response_decoded.message
+
+
+
+        if (response_decoded.action != undefined) { //action message
+
+          p.className = 'action_message'
+
+        } else { // user message
+
+          let span_username = document.createElement('span')
+          span_username.className = 'username'
+          span_username.innerText = `<@${response_decoded.username}>`
+          span_username.style.color = response_decoded.color
+
+          span_message.className = 'message'
+
+          p.append(span_username)
+        }
+
+        p.append(span_message)
+        chat.append(p)
+        $('.message').emoticonize();
+        document.querySelectorAll('#chat_wrapper .simplebar-content-wrapper')[0].scrollTop = document.querySelectorAll('#chat_wrapper .simplebar-content-wrapper')[0].scrollHeight;
+
+        this.init()
+      }
+    }
+
+
+    Poll.init()
+
+    class NewMessage {
+
+      static userMessage(time, color, username, message) {
+        const headers = { 'Content-Type': 'application/json;charset=utf-8' } // nagłówek
+        const body = JSON.stringify({
+          time: time,
+          color: color,
+          username: username,
+          message: message
+        }) // body - dane
+        const response = fetch('/message', {
+          method: 'POST',
+          headers,
+          body
+        })
+
+      }
+
+      static actionMessage(time, action, username, new_name, new_color) {
+        const headers = { 'Content-Type': 'application/json;charset=utf-8' } // nagłówek
+        const body = {
+          time: time,
+          action: action,
+          message: undefined,
+        } // body - dane
+
+        switch (action) {
+          case '/color':
+            body.message = `Użytkownik <@${username}> zmienił kolor nicku na ${new_color}.`
+            my_color = new_color
+            break
+          case '/nick':
+            body.message = `Użytkownik <@${username}> nazywa się od teraz <@${new_name}>.`
+            my_username = new_name
+            break
+          case '/quit':
+            body.message = `Użytkownik <@${username}> opuścił czat.`
+            break
+          case 'init':
+            body.message = `Użytkownik <@${username}> dołączył na czat.`
+            break
+        }
+
+        const response = fetch('/message', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        })
+      }
+    }
+
+
+    setTimeout(() => { NewMessage.actionMessage(Date.now(), 'init', my_username, null, null) }, 0)
+
+
+    input.addEventListener('keydown', (event) => {
+      if (current_history_index == null) {
+        if (input_history.length > 0 && event.key == "ArrowUp") {
+          current_history_index = 0
+        } else {
+          return
+        }
+      }
+      let have_matched = true;
+      let reset = false;
+      switch (event.key) {
+        case 'ArrowUp': { // coraz starsze polecenie
+          event.preventDefault()
+          if (input_history[input_history.length - (current_history_index + 1)] != undefined) {
+            current_history_index++
+          }
+        }
+          break
+        case 'ArrowDown': { // corasz młodzsze polecenie
+          event.preventDefault()
+          if (input_history[input_history.length - (current_history_index - 1)] != undefined) {
+            current_history_index--
+          } else if (current_history_index == 1) {
+            current_history_index = null
+            reset = true
+          }
+
+        } break
+        default: {
+          have_matched = false
+        }
+      }
+      if (have_matched == true) {
+        if (reset == true) {
+          event.target.value = ''
+        } else {
+          event.target.value = input_history[input_history.length - current_history_index]
+        }
+      }
+    }, false)
+
+    input.addEventListener('keyup', (event) => {
+      if (event.key == 'Enter' && event.target.value.trim() != '') {
+        input_history.push(event.target.value)
+        current_history_index = 0
+
+
+        let args = event.target.value.replace(/\s\s+/g, ' ').split(' ')
+        switch (args[0]) {
+          case '/color': {
+            console.log('Zmiana koloru')
+            let message = NewMessage.actionMessage(Date.now(), '/color', my_username, null, args[1])
+          }
+            break
+          case '/nick': {
+            console.log('Zmiana nicku')
+            let message = NewMessage.actionMessage(Date.now(), '/nick', my_username, args[1], null)
+
+          }
+            break
+          case '/clear':
+          case '/cls': {
+            console.log('Czyszczenie')
+            chat.innerHTML = ''
+
+          }
+            break
+          case '/quit': {
+            console.log('Wychodzenie')
+            let message = NewMessage.actionMessage(Date.now(), '/quit', my_username, null, null)
+            // close();
+            setTimeout(() => { location.reload() }, 500)
+
+          }
+            break
+          default: {
+            let message = NewMessage.userMessage(Date.now(), my_color, my_username, event.target.value)
+          }
+            break
+        }
+        event.target.value = ''
+      }
+    })
+  </script>
+</body>
+
+</html>
