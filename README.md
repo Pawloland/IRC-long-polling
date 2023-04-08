@@ -1,3 +1,4 @@
 # IRC-long-polling
 
-https://pawel-maczalowski-irc.herokuapp.com/
+Poczatuj tutaj:
+https://irc-long-polling.onrender.com
